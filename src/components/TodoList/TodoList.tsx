@@ -25,23 +25,37 @@ export const TodoList: React.FC<Props> = ({
 }) => {
   const [editingTodoId, setEditingTodoId] = useState<number | null>(null);
   const [editingTitle, setEditingTitle] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  function handleFinishEditing(
+  async function handleFinishEditing(
     /* eslint-disable-next-line */
     e: React.FormEvent<HTMLFormElement> | React.FocusEvent<HTMLInputElement> | null,
     toDoID: number,
   ) {
     e?.preventDefault();
 
+    if (isSubmitting) {
+      return;
+    }
+
+    setIsSubmitting(true);
+
     if (!editingTitle.trim()) {
-      deleteTodo(toDoID);
+      await deleteTodo(toDoID);
       setEditingTodoId(null);
+      setIsSubmitting(false);
 
       return;
     }
 
-    updateTodoData(toDoID, { title: editingTitle.trim() });
-    setEditingTodoId(null);
+    try {
+      await updateTodoData(toDoID, { title: editingTitle.trim() });
+      setEditingTodoId(null);
+    } catch {
+      //do nothing
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -85,12 +99,16 @@ export const TodoList: React.FC<Props> = ({
                   <input
                     data-cy="TodoTitleField"
                     type="text"
-                    className="todo__title-field"
-                    placeholder="Empty todo will be deleted"
+                    className="todoapp__new-todo"
+                    placeholder="What needs to be done?"
                     value={editingTitle}
                     onChange={e => setEditingTitle(e.target.value)}
                     onKeyUp={e => e.key === 'Escape' && setEditingTodoId(null)}
-                    onBlur={e => handleFinishEditing(e, todo.id)}
+                    onBlur={() => {
+                      if (!isSubmitting) {
+                        handleFinishEditing(null, todo.id);
+                      }
+                    }}
                     autoFocus
                   />
                 </form>
@@ -106,7 +124,6 @@ export const TodoList: React.FC<Props> = ({
                   {todo.title}
                 </span>
               )}
-              {/* Remove button appears only on hover */}
               {todo.id !== editingTodoId && (
                 <button
                   type="button"
@@ -117,8 +134,6 @@ export const TodoList: React.FC<Props> = ({
                   ×
                 </button>
               )}
-
-              {/* overlay will cover the todo while it is being deleted or updated */}
               <div
                 data-cy="TodoLoader"
                 className={classNames('modal overlay', {
@@ -128,7 +143,6 @@ export const TodoList: React.FC<Props> = ({
                     updatingTodoIds.includes(todo.id),
                 })}
               >
-                {/* eslint-disable-next-line */}
                 <div className="modal-background has-background-white-ter" />
                 <div className="loader" />
               </div>

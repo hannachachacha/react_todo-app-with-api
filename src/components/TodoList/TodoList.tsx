@@ -2,7 +2,7 @@
 import { Todo } from '../../types/Todo';
 import { Filter } from '../../types/Filter';
 import classNames from 'classnames';
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 
 type Props = {
   todos: Todo[];
@@ -26,6 +26,7 @@ export const TodoList: React.FC<Props> = ({
   const [editingTodoId, setEditingTodoId] = useState<number | null>(null);
   const [editingTitle, setEditingTitle] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const editInputRef = useRef<HTMLInputElement>(null);
 
   async function handleFinishEditing(
     /* eslint-disable-next-line */
@@ -50,10 +51,11 @@ export const TodoList: React.FC<Props> = ({
 
     try {
       await updateTodoData(toDoID, { title: editingTitle.trim() });
-      setEditingTodoId(null);
     } catch {
-      //do nothing
+      setEditingTodoId(toDoID);
+      editInputRef.current?.focus();
     } finally {
+      setEditingTodoId(null);
       setIsSubmitting(false);
     }
   }

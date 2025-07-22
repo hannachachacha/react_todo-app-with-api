@@ -99,6 +99,7 @@ export const TodoList: React.FC<Props> = ({
               {todo.id === editingTodoId ? (
                 <form onSubmit={e => handleFinishEditing(e, todo.id)}>
                   <input
+                    ref={editInputRef}
                     data-cy="TodoTitleField"
                     type="text"
                     className="todoapp__new-todo"

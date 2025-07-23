@@ -9,8 +9,7 @@ type Props = {
   filter: Filter;
   tempTodo: Todo | null;
   deleteTodo: (id: number) => void;
-  deletingTodoIds: number[];
-  updatingTodoIds: number[];
+  processingTodoIds: number[];
   updateTodoData: (todoId: number, data: Partial<Todo>) => Promise<void>;
   setIsEditingTodo: (isEditing: boolean) => void;
 };
@@ -20,8 +19,7 @@ export const TodoList: React.FC<Props> = ({
   filter,
   tempTodo,
   deleteTodo,
-  deletingTodoIds,
-  updatingTodoIds,
+  processingTodoIds,
   updateTodoData,
   setIsEditingTodo,
 }) => {
@@ -187,9 +185,7 @@ export const TodoList: React.FC<Props> = ({
                 data-cy="TodoLoader"
                 className={classNames('modal overlay', {
                   'is-active':
-                    todo.id === 0 ||
-                    deletingTodoIds.includes(todo.id) ||
-                    updatingTodoIds.includes(todo.id),
+                    todo.id === 0 || processingTodoIds.includes(todo.id),
                 })}
               >
                 <div className="modal-background has-background-white-ter" />

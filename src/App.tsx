@@ -16,8 +16,7 @@ export const App: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [tempTodo, setTempTodo] = useState<Todo | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [deletingTodoIds, setDeletingTodoIds] = useState<number[]>([]);
-  const [updatingTodoIds, setUpdatingTodoIds] = useState<number[]>([]);
+  const [processingTodoIds, setProcessingTodoIds] = useState<number[]>([]);
   const [isEditingTodo, setIsEditingTodo] = useState(false);
 
   const errorTimeout = useRef<number | null>(null);
@@ -40,7 +39,7 @@ export const App: React.FC = () => {
   }
 
   const deleteTodo = async (id: number) => {
-    setDeletingTodoIds(prev => [...prev, id]);
+    setProcessingTodoIds(prev => [...prev, id]);
 
     try {
       await client.delete(`/todos/${id}`);
@@ -48,7 +47,7 @@ export const App: React.FC = () => {
       setTodos(prevTodos => prevTodos.filter(todo => todo.id !== id));
     } catch (e) {
       showError('Unable to delete a todo');
-      setDeletingTodoIds(prev => prev.filter(todoId => todoId !== id));
+      setProcessingTodoIds(prev => prev.filter(todoId => todoId !== id));
       throw e;
     }
   };
@@ -92,7 +91,7 @@ export const App: React.FC = () => {
   const activeTodos = todos?.filter(todo => !todo.completed).length;
 
   async function updateTodoData(todoId: number, data: Partial<Todo>) {
-    setUpdatingTodoIds(prev => [...prev, todoId]);
+    setProcessingTodoIds(prev => [...prev, todoId]);
 
     try {
       const updatedTodo = await client.patch<Todo>(`/todos/${todoId}`, data);
@@ -104,7 +103,7 @@ export const App: React.FC = () => {
       showError('Unable to update a todo');
       throw new Error('Update failed');
     } finally {
-      setUpdatingTodoIds(prev => prev.filter(id => id !== todoId));
+      setProcessingTodoIds(prev => prev.filter(id => id !== todoId));
     }
   }
 
@@ -155,8 +154,7 @@ export const App: React.FC = () => {
               filter={filter}
               tempTodo={tempTodo}
               deleteTodo={deleteTodo}
-              deletingTodoIds={deletingTodoIds}
-              updatingTodoIds={updatingTodoIds}
+              processingTodoIds={processingTodoIds}
               updateTodoData={updateTodoData}
               setIsEditingTodo={setIsEditingTodo}
             />

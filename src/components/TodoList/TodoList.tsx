@@ -2,7 +2,7 @@
 import { Todo } from '../../types/Todo';
 import { Filter } from '../../types/Filter';
 import classNames from 'classnames';
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 
 type Props = {
   todos: Todo[];
@@ -12,6 +12,7 @@ type Props = {
   deletingTodoIds: number[];
   updatingTodoIds: number[];
   updateTodoData: (todoId: number, data: Partial<Todo>) => Promise<void>;
+  setIsEditingTodo: (isEditing: boolean) => void;
 };
 
 export const TodoList: React.FC<Props> = ({
@@ -22,16 +23,24 @@ export const TodoList: React.FC<Props> = ({
   deletingTodoIds,
   updatingTodoIds,
   updateTodoData,
+  setIsEditingTodo,
 }) => {
   const [editingTodoId, setEditingTodoId] = useState<number | null>(null);
   const [editingTitle, setEditingTitle] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const editInputRef = useRef<HTMLInputElement>(null);
 
+  useEffect(() => {
+    if (editingTodoId !== null && editInputRef.current) {
+      editInputRef.current.focus();
+    }
+  }, [editingTodoId]);
+
   async function handleFinishEditing(
     /* eslint-disable-next-line */
     e: React.FormEvent<HTMLFormElement> | React.FocusEvent<HTMLInputElement> | null,
     toDoID: number,
+    fromBlur: boolean = false,
   ) {
     e?.preventDefault();
 
@@ -41,21 +50,53 @@ export const TodoList: React.FC<Props> = ({
 
     setIsSubmitting(true);
 
-    if (!editingTitle.trim()) {
-      await deleteTodo(toDoID);
+    const newTitle = editingTitle.trim();
+    const originalTodo = todos.find(todo => todo.id === toDoID);
+
+    if (!newTitle) {
+      try {
+        await deleteTodo(toDoID);
+        setEditingTodoId(null);
+        setIsEditingTodo(false);
+      } catch {
+        // Keep editing state active if delete request fails
+        setEditingTodoId(toDoID);
+        setIsEditingTodo(true);
+        requestAnimationFrame(() => {
+          editInputRef.current?.focus();
+        });
+      } finally {
+        setIsSubmitting(false);
+      }
+
+      return;
+    }
+
+    // If title hasn't changed, just cancel editing
+    if (originalTodo && newTitle === originalTodo.title) {
       setEditingTodoId(null);
+      setIsEditingTodo(false);
       setIsSubmitting(false);
 
       return;
     }
 
     try {
-      await updateTodoData(toDoID, { title: editingTitle.trim() });
-    } catch {
-      setEditingTodoId(toDoID);
-      editInputRef.current?.focus();
-    } finally {
+      await updateTodoData(toDoID, { title: newTitle });
       setEditingTodoId(null);
+      setIsEditingTodo(false);
+    } catch {
+      // Keep the editing state active on failure
+      setEditingTodoId(toDoID);
+      setIsEditingTodo(true);
+
+      // If error happened during blur, need to refocus manually
+      if (fromBlur) {
+        requestAnimationFrame(() => {
+          editInputRef.current?.focus();
+        });
+      }
+    } finally {
       setIsSubmitting(false);
     }
   }
@@ -97,22 +138,26 @@ export const TodoList: React.FC<Props> = ({
                 />
               </label>
               {todo.id === editingTodoId ? (
-                <form onSubmit={e => handleFinishEditing(e, todo.id)}>
+                <form onSubmit={e => handleFinishEditing(e, todo.id, false)}>
                   <input
                     ref={editInputRef}
                     data-cy="TodoTitleField"
                     type="text"
-                    className="todoapp__new-todo"
-                    placeholder="What needs to be done?"
+                    className="todo__title-field"
+                    placeholder="Empty todo will be deleted"
                     value={editingTitle}
                     onChange={e => setEditingTitle(e.target.value)}
-                    onKeyUp={e => e.key === 'Escape' && setEditingTodoId(null)}
-                    onBlur={() => {
-                      if (!isSubmitting) {
-                        handleFinishEditing(null, todo.id);
+                    onKeyUp={e => {
+                      if (e.key === 'Escape') {
+                        setEditingTodoId(null);
+                        setIsEditingTodo(false);
                       }
                     }}
-                    autoFocus
+                    onBlur={() => {
+                      if (!isSubmitting) {
+                        handleFinishEditing(null, todo.id, true);
+                      }
+                    }}
                   />
                 </form>
               ) : (
@@ -122,6 +167,7 @@ export const TodoList: React.FC<Props> = ({
                   onDoubleClick={() => {
                     setEditingTodoId(todo.id);
                     setEditingTitle(todo.title);
+                    setIsEditingTodo(true);
                   }}
                 >
                   {todo.title}

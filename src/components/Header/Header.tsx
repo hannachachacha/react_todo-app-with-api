@@ -8,6 +8,7 @@ type Props = {
   handleNewTitle: (newTitle: string) => Promise<boolean>;
   isLoading: boolean;
   handleMarkAllCompleted: () => void;
+  isEditingTodo: boolean;
 };
 
 export const Header: React.FC<Props> = ({
@@ -16,13 +17,34 @@ export const Header: React.FC<Props> = ({
   handleNewTitle,
   isLoading,
   handleMarkAllCompleted,
+  isEditingTodo,
 }) => {
   const [input, setInput] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    inputRef.current?.focus();
-  });
+    if (!isEditingTodo) {
+      inputRef.current?.focus();
+    }
+  }, [isEditingTodo]);
+
+  useEffect(() => {
+    if (input === '' && !isEditingTodo) {
+      inputRef.current?.focus();
+    }
+  }, [input, isEditingTodo]);
+
+  useEffect(() => {
+    if (!isLoading && inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [isLoading]);
+
+  useEffect(() => {
+    if (inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [todos]);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -38,6 +60,9 @@ export const Header: React.FC<Props> = ({
 
     if (success) {
       setInput('');
+    } else {
+      // Return focus to the input field on failure
+      inputRef.current?.focus();
     }
   };
 

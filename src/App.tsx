@@ -18,6 +18,7 @@ export const App: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [deletingTodoIds, setDeletingTodoIds] = useState<number[]>([]);
   const [updatingTodoIds, setUpdatingTodoIds] = useState<number[]>([]);
+  const [isEditingTodo, setIsEditingTodo] = useState(false);
 
   const errorTimeout = useRef<number | null>(null);
 
@@ -45,10 +46,10 @@ export const App: React.FC = () => {
       await client.delete(`/todos/${id}`);
 
       setTodos(prevTodos => prevTodos.filter(todo => todo.id !== id));
-    } catch {
+    } catch (e) {
       showError('Unable to delete a todo');
-    } finally {
       setDeletingTodoIds(prev => prev.filter(todoId => todoId !== id));
+      throw e;
     }
   };
 
@@ -94,13 +95,14 @@ export const App: React.FC = () => {
     setUpdatingTodoIds(prev => [...prev, todoId]);
 
     try {
-      const updatedTodo = await client.patch<Todo>(`/todos5/${todoId}`, data);
+      const updatedTodo = await client.patch<Todo>(`/todos/${todoId}`, data);
 
       setTodos(prevTodos =>
         prevTodos.map(todo => (todo.id === todoId ? updatedTodo : todo)),
       );
     } catch {
       showError('Unable to update a todo');
+      throw new Error('Update failed');
     } finally {
       setUpdatingTodoIds(prev => prev.filter(id => id !== todoId));
     }
@@ -143,6 +145,7 @@ export const App: React.FC = () => {
           handleNewTitle={handleNewTitle}
           isLoading={isLoading}
           handleMarkAllCompleted={handleMarkAllCompleted}
+          isEditingTodo={isEditingTodo}
         />
 
         {(todos.length > 0 || tempTodo) && (
@@ -155,6 +158,7 @@ export const App: React.FC = () => {
               deletingTodoIds={deletingTodoIds}
               updatingTodoIds={updatingTodoIds}
               updateTodoData={updateTodoData}
+              setIsEditingTodo={setIsEditingTodo}
             />
 
             <Footer
